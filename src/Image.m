@@ -375,7 +375,7 @@ classdef Image < handle
                     fprintf('Image.read(''%s'', ''%s'')\n', filename, filename_ext);
                     
                     global LIB_PATH
-                    dcraw = [LIB_PATH,'/dcraw/dcraw-9.26-ms-32-bit.exe'];
+                    dcraw = [LIB_PATH,'/dcraw/dcraw.exe'];
                     
                     % load raw image data
                     % https://www.cybercom.net/~dcoffin/dcraw/dcraw.1.html
