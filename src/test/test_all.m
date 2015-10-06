@@ -1,3 +1,6 @@
+% Copyright (c) 2015, Philipp Simon Schmidt
+% For more details see LICENSE.txt and AUTHORS.txt
+
 global SAVE_FIGURES;
 SAVE_FIGURES = 1;
 

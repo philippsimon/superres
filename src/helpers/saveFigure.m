@@ -1,3 +1,6 @@
+% Copyright (c) 2015, Philipp Simon Schmidt
+% For more details see LICENSE.txt and AUTHORS.txt
+
 function saveFigure(fig, name, aspectRatio)
     if nargin < 3
         aspectRatio = [3 2];

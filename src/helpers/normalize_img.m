@@ -1,3 +1,6 @@
+% Copyright (c) 2015, Philipp Simon Schmidt
+% For more details see LICENSE.txt and AUTHORS.txt
+
 function [img,img_min,img_max] = normalize_img( img, img_min, img_max )
 %NORMALIZE_IMG Normalize image to [0 1] range
 

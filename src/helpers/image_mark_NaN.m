@@ -1,3 +1,6 @@
+% Copyright (c) 2015, Philipp Simon Schmidt
+% For more details see LICENSE.txt and AUTHORS.txt
+
 function img = image_mark_NaN(img, color)
     if nargin == 1
         color = [1 0 0];

@@ -1,3 +1,6 @@
+% Copyright (c) 2015, Philipp Simon Schmidt
+% For more details see LICENSE.txt and AUTHORS.txt
+
 % test Image class with gbrg bayer image
 CData =...
   [ 0.1 0.2 0.3 0.4;

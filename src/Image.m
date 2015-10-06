@@ -1,3 +1,6 @@
+% Copyright (c) 2015, Philipp Simon Schmidt
+% For more details see LICENSE.txt and AUTHORS.txt
+
 classdef Image < handle
     %IMAGE Summary of this class goes here
     %   Detailed explanation goes here
