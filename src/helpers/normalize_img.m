@@ -9,4 +9,3 @@ function [img,img_min,img_max] = normalize_img( img, img_min, img_max )
     img = ( img - img_min ) / (img_max - img_min);
 
 end
-
