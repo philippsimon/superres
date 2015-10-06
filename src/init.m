@@ -1,5 +1,5 @@
 function init()
-    addpath('./helpers', '../lib','../lib/log4m')
+    addpath('./helpers', '../lib','../lib/log4m', './test')
     
     global LIB_PATH
     LIB_PATH = fullfile(pwd,'../lib');
