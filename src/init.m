@@ -17,6 +17,6 @@ function init()
         SHOW_FIGURES = 1;
     end
 
-    global results_folder;
-    results_folder = 'figures/';
+    global RESULTS_FOLDER;
+    RESULTS_FOLDER = 'figures/';
 end

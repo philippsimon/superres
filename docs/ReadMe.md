@@ -1,0 +1,1 @@
+http://web4.cs.ucl.ac.uk/staff/j.kautz/publications/exposure_fusion.pdf

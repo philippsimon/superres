@@ -10,8 +10,8 @@ function saveFigure(fig, name, aspectRatio)
     set(fig, 'Position', [0 0 size]);
     set(fig,'PaperPositionMode','auto');
     
-    global results_folder;
-    folder = [results_folder,'/figures'];
+    global RESULTS_FOLDER;
+    folder = [RESULTS_FOLDER,'/figures'];
     mkdir(folder);
     
     D = dir([folder, '/*.png']);

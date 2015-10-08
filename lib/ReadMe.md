@@ -1,4 +1,4 @@
-This folder contains libraries and source code from other sources.
+This folder contains libraries with code from external sources.
 
 This project requires the following external libraries need to get downloaded and put
 

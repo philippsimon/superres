@@ -1,34 +1,39 @@
 % Copyright (c) 2015, Philipp Simon Schmidt
 % For more details see LICENSE.txt and AUTHORS.txt
 
-function SuperResolution_test(folder)
+function test_SuperResolution(folder)
     %opengl('save','software');
 
     init();
     
-    global results_folder;
-    results_folder = [folder,'/results'];
+    global RESULTS_FOLDER;
+    RESULTS_FOLDER = [folder,'/results'];
 
     close all;
     super_res = SuperResolution();
     
     function run()
-        disp(['create clean results folder ',results_folder]);
+        disp(['create clean results folder ',RESULTS_FOLDER]);
         try
-            rmdir(results_folder,'s');
+            rmdir(RESULTS_FOLDER,'s');
         catch err
         end
-        mkdir(results_folder);
+        mkdir(RESULTS_FOLDER);
         
         %super_res.images{1}.show('red');
         %super_res.undistortImages();
         super_res.extractFeatures();
         super_res.matchFeatures();
-        [joined_image, arranged_images] = super_res.joinImages();
-        super_res.writeImages(joined_image, arranged_images);
+        [arranged_imgs, weights_arranged_imgs, arranged_imgs_orig] = ...
+            super_res.adaptImagesAndCalcWeights('red', true);
+        joined_image = SuperResolution.joinArrangedImages(...
+            arranged_imgs, weights_arranged_imgs);
+        super_res.writeImages(joined_image, arranged_imgs,...
+            weights_arranged_imgs, arranged_imgs_orig);
     end
 
-    % SuperResolution.generateTestImages('../misc/ISO_12233-reschart.png','test/',10,[600 800]);
+    % SuperResolution.generateTestImages(...
+    %    '../misc/ISO_12233-reschart.png','test/',10,[600 800]);
     
     switch folder
         % default test behavior from RAW camera data
@@ -36,7 +41,8 @@ function SuperResolution_test(folder)
             'test/Panasonic_LX100/exposure_series_1',...
             'test/Sony_A300/exposure_series_1',...
             'test/Sony_A300/exposure_series_2',...
-            'test/RPiTelecine/exposure_series_1'...
+            'test/Raspberry_Pi_NoIR_Camera/exposure_series_1'...
+            'test/Raspberry_Pi_NoIR_Camera/exposure_series_2'...
         }
             super_res.read({[folder,'/*.*']});
             run();
@@ -51,16 +57,17 @@ function SuperResolution_test(folder)
             % amount images needed for super resolution
             super_res.read({[folder,'/P1020520.RW2']});
             
-            original_results_folder = results_folder;
+            original_RESULTS_FOLDER = RESULTS_FOLDER;
             
             for i = 1:9
-                results_folder = [original_results_folder,'/',num2str(i+1)];
+                RESULTS_FOLDER = [original_RESULTS_FOLDER,'/',num2str(i+1)];
                 image_idx = length(super_res.images)+1;
                 super_res.images{image_idx} = Image.read(...
                     [folder,'/P102052',num2str(i),'.RW2']);
                 run();
-                movefile([results_folder,'/1_joined_image_mean.png'],...
-                    [original_results_folder,'/joined_image_from_',num2str(i+1),'_images.png']);
+                movefile([RESULTS_FOLDER,'/1_joined_image_mean.png'],...
+                    [original_RESULTS_FOLDER,'/joined_image_from_',...
+                    num2str(i+1),'_images.png']);
             end
             
         otherwise

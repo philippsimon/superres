@@ -187,7 +187,7 @@ classdef Image < handle
         function whitebalanceBayer(img,wb_multipliers)
             %  White Balancing
             % from https://users.soe.ucsc.edu/~rcsumner/rawguide/RAWguide.pdf
-            mask = Image.getBayerWhiteBalanceMask(...
+            mask = wbmask(...
                 size(img.CDataBayer,1),...
                 size(img.CDataBayer,2),...
                 wb_multipliers,...
@@ -1460,29 +1460,6 @@ classdef Image < handle
             end
             
             toc
-        end
-        
-        function wbmask = getBayerWhiteBalanceMask(m,n,wbmults,align)
-            % COLORMASK = whiteValanceMask(M,N,WBMULTS,ALIGN)
-            %
-            % Makes a white-balance multiplicative mask for an image of size m-by-n
-            % with RGB while balance multipliers WBMULTS = [R_scale G_scale B_scale].
-            % ALIGN is string indicating Bayer arrangement: ’rggb’,’gbrg’,’grbg’,’bggr’
-            wbmask = wbmults(2)*ones(m,n); %Initialize to all green values
-            switch align
-            case 'rggb'
-                wbmask(1:2:end,1:2:end) = wbmults(1); %r
-                wbmask(2:2:end,2:2:end) = wbmults(3); %b
-            case 'bggr'
-                wbmask(2:2:end,2:2:end) = wbmults(1); %r
-                wbmask(1:2:end,1:2:end) = wbmults(3); %b
-            case 'grbg'
-                wbmask(1:2:end,2:2:end) = wbmults(1); %r
-                wbmask(1:2:end,2:2:end) = wbmults(3); %b
-            case 'gbrg'
-                wbmask(2:2:end,1:2:end) = wbmults(1); %r
-                wbmask(1:2:end,2:2:end) = wbmults(3); %b
-            end
         end
         
     end
