@@ -1,6 +1,6 @@
 This folder contains libraries with code from external sources.
 
-This project requires the following external libraries need to get downloaded and put
+This project requires the following external libraries. Download and extract them under the written path.
 
 | Name | Path | Link |
 | ---- | ---- | ------------- |
