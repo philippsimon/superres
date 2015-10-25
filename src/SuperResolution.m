@@ -177,7 +177,7 @@ classdef SuperResolution < handle
             
             scale = round(amount_images^0.5);
             scale = min(2,scale);
-            if ~isempty(reference_image.CDataBayer)
+            if ~isempty(reference_image.sensorAlignment)
                 % use half resolution for bayer data
                 scale = scale / 2;
             end
@@ -188,7 +188,7 @@ classdef SuperResolution < handle
             
             % Bayer: double internal scale for red and blue channel as they only
             % appear once in the bayer pattern
-            if ~isempty(reference_image.CDataBayer) && ~strcmp(channel,'green')
+            if ~isempty(reference_image.sensorAlignment) && ~strcmp(channel,'green')
                 scale = 2 * scale;
             end
             
@@ -201,11 +201,11 @@ classdef SuperResolution < handle
                 image = super_res.images{i};
                 
                 switch channel
-                    case {'red', 'blue'}
+                    case {'', 'red', 'blue'}
                         image_data = image.get('CData','channel',channel);
                         
                     case 'green'
-                        if isempty(image.CDataBayer)
+                        if isempty(image.sensorAlignment)
                             image_data = image.CDataGreen;
                             
                         else
@@ -218,11 +218,10 @@ classdef SuperResolution < handle
                                 % green1 and green 2
                                 green1 = image.CDataGreen1;
                                 green2 = image.CDataGreen2;
-                                if nargin > 2
-                                    estimated_nsr = noise_variance / var([image.CDataGreen1(:);image.CDataGreen2(:)]);
-                                    green1 = deconvwnr(green1, PSF, estimated_nsr);
-                                    green2 = deconvwnr(green2, PSF, estimated_nsr);
-                                end
+                                
+                                estimated_nsr = noise_variance / var([green1(:);green2(:)]);
+                                green1 = deconvwnr(green1, PSF, estimated_nsr);
+                                green2 = deconvwnr(green2, PSF, estimated_nsr);
                             end
 
                             switch image.sensorAlignment
@@ -247,12 +246,13 @@ classdef SuperResolution < handle
                 
                 % not possible as a mask can be applied to the image during
                 % reading and deconvwnr only allows finite values
-                if nargin > 2 && (strcmp(channel,'red') || strcmp(channel,'blue') || isempty(image.CDataBayer))
-                    if nargin >= 3
-                        % deblur image using Wiener filter
-                        estimated_nsr = noise_variance / var(image_data(:));
-                        image_data = deconvwnr(image_data, PSF, estimated_nsr);
-                    end
+                if nargin >= 3 && (strcmp(channel,'red') ...
+                        || strcmp(channel,'blue') ...
+                        || isempty(image.sensorAlignment))
+
+                    % deblur image using Wiener filter
+                    estimated_nsr = noise_variance / var(image_data(:));
+                    image_data = deconvwnr(image_data, PSF, estimated_nsr);
                 end
                 
                 % scale image
@@ -316,12 +316,8 @@ classdef SuperResolution < handle
     %                 [arranged_imgs(:,:,1), arranged_imgs(:,:,i), correlation_curves{i}] = ...
     %                     Image.adaptRelative(...
     %                         arranged_imgs(:,:,1), arranged_imgs(:,:,i));
-                    img_i = arranged_imgs(:,:,i);
-                    img_j = arranged_imgs(:,:,j);
-                    idx_finite = isfinite(img_i) & isfinite(img_j);
-                    samples = [img_i(idx_finite) img_j(idx_finite)];
                     [overexposure_i, overexposure_j, p_i_j(i,j,:), corr_curves_i_j{i,j}] = ...
-                        Image.findOverexposure(samples(:,1),samples(:,2));
+                        Image.findOverexposure(arranged_imgs(:,:,i),arranged_imgs(:,:,j));
                     
                     overexp_imgs(i) = min(overexp_imgs(i),overexposure_i);
                     overexp_imgs(j) = min(overexp_imgs(j),overexposure_j);
@@ -335,13 +331,15 @@ classdef SuperResolution < handle
                 hold on
                 for j = 1:amount_imgs
                     if i ~= j
-                        i2 = i; j2 = j;
-                        if j2 < i2
-                            tmp_i2 = i2;
-                            i2 = j2;
-                            j2 = tmp_i2;
+                        if i < j
+                            corr_curve = corr_curves_i_j{i,j};
+                            p_1 = p_i_j(i,j,1); p_2 = p_i_j(i,j,2);
+                            plot(corr_curve(:,1),(corr_curve(:,2) - p_2) / p_1)
+                        else
+                            corr_curve = corr_curves_i_j{j,i};
+                            p_1 = p_i_j(j,i,1); p_2 = p_i_j(j,i,2);
+                            plot(corr_curve(:,2),corr_curve(:,1) * p_1 + p_2)
                         end
-                        plot(corr_curves_i_j{i2,j2}(:,1),(corr_curves_i_j{i2,j2}(:,2) - p_i_j(i2,j2,2)) / p_i_j(i2,j2,1))
                     end
                 end
             end
@@ -352,19 +350,48 @@ classdef SuperResolution < handle
 %             figure;
 %             variance = var(arranged_images,0,3,'omitnan');
 %             imshow(variance / max(variance(:)));
-%             imwrite(im2uint16(variance),['test_data/results/variance-',int2str(amount_images),'-arranged_images.png']);
+%             imwrite(im2uint16(variance),...
+%                 ['test_data/results/variance-',int2str(amount_images),...
+%                 '-arranged_images.png']);
 %             
 %             figure;
 %             histogram(variance(:));
 
+%             parts = 2;
+%             for i = 0:parts-1
+%                 for j = 0:parts-1
+%                     part_imgs = arranged_imgs(1+i*end/3:(i+1)*end/3,1+j*end/3:(j+1)*end/3,:);
+%                     [~,~,p] = Image.findOverexposure(part_imgs(:,:,1),part_imgs(:,:,2))
+%                 end
+%             end
+
+            for i = 2:amount_imgs
+                img = arranged_imgs(:,:,i);
+                
+                % linearize all data relative to each other
+                % TODO: use all p values
+                img = (img - p_i_j(1,i,2)) / p_i_j(1,i,1);
+                
+                % adapt also overexposure value for calculating the weights
+                overexp_imgs(i) = ...
+                    (overexp_imgs(i) - p_i_j(1,i,2)) / p_i_j(1,i,1);
+                
+                arranged_imgs(:,:,i) = img;
+            end
             
+            % calculate weight for every sample of each pixel
+            % TODO: use for weight als max value of original picture as it
+            % can be that the original picture only used a very small part
+            % of the whole available dynamic range
             fig = figure;
             hold on
             max_imgs = max(arranged_imgs(:));
             x = 0:max_imgs/300:max_imgs;
             for i = 1:amount_imgs
                 img = arranged_imgs(:,:,i);
-                weights_img = weights_arranged_imgs(:,:,i);
+                
+                max_img = max(img(:));
+                max_usable_img = min(overexp_imgs(i),max_img);
                 
                 % set weights of values between 0 and overexp with
                 % beta distribution with alpha=5, beta=2
@@ -376,25 +403,48 @@ classdef SuperResolution < handle
                 %      ...      .
                 %  ....          .
                 %  0            overexp / max
-                max_img = max(img(:));
-                max_usable_img = min(overexp_imgs(i),max_img);
-                pd = makedist('Beta',5,2);
-                weights_img = pdf(pd, img / max_usable_img);
+%                 pd = makedist('Beta',2,5);
+%                 weights_img = pdf(pd, img / max_usable_img);
+%                 plot(x, pdf(pd, x / max_usable_img));
                 
-                plot(x, pdf(pd, x / max_usable_img));
+                % use for weight a normal distribution in the middle
+                % between the overexposure and 0
+                mu = 0.5 * max_usable_img;
+                sigma = mu / 3;
+                pd = makedist('Normal',mu,sigma);
+                weights_img = pdf(pd, img);
+                if max_usable_img == overexp_imgs(i);
+                    overexposed_pixels = img > max_usable_img;
+                    weights_img(overexposed_pixels) = 0;
+                    %imgaussfilt(weights_img,4);
+                    %weights_img(overexposed_pixels) = 0;
+                end
+                plot(x, pdf(pd, x));
+
                 plot(max_img,0,'o');
                 
-                % linearize all data relative to each other
-                % TODO: use all p values
-                img = (img - p_i_j(1,i,2)) / p_i_j(1,i,1);
+                % use equal weights for all values beside the overexposed
+                % ones
+%                 weights_img = weights_arranged_imgs(:,:,i);
+%                 weights_img(img > 0.95 * max_usable_img) = 0;
                 
-                arranged_imgs(:,:,i) = img;
+
                 weights_arranged_imgs(:,:,i) = weights_img;
+            end
+            
+            % sum of weights for one image pixel has to be one
+            sum_weights = sum(weights_arranged_imgs,3);
+            % to not divide by 0 if the sum is zero for a pixel
+            sum_weights(sum_weights == 0) = -Inf;
+            for i = 1: amount_imgs
+                weights_arranged_imgs(:,:,i) = ...
+                    weights_arranged_imgs(:,:,i) ./ sum_weights;
             end
 
         end
         
-        function writeImages(super_res, joined_image, arranged_images, weights_arranged_images, arranged_images_orig)
+        function writeImages(super_res, joined_image, arranged_images,...
+                weights_arranged_images, arranged_images_orig)
             disp('SuperResolution.writeImages(...)');
             
             global LIB_PATH
@@ -418,28 +468,41 @@ classdef SuperResolution < handle
             
             mkdir(RESULTS_FOLDER,'/arranged_images');
             for i = 1:size(arranged_images,3)
-                filename = [RESULTS_FOLDER,'/arranged_images/',int2str(i),'.png'];
+                filename = [RESULTS_FOLDER,'/arranged_images/',...
+                    int2str(i),'.png'];
                 disp(['  write ',filename]);
-                imwrite(im2uint16(arranged_images(:,:,i)),filename,'Alpha',im2uint16(weights_arranged_images(:,:,i)));
+                imwrite(im2uint16(arranged_images(:,:,i)),filename,...
+                    'Alpha',im2uint16(weights_arranged_images(:,:,i)));
             end
             
             if nargin >= 4
                 mkdir(RESULTS_FOLDER,'/arranged_images_orig');
                 for i = 1:size(arranged_images,3)
-                    filename = [RESULTS_FOLDER,'/arranged_images_orig/',int2str(i),'.png'];
+                    filename = [RESULTS_FOLDER,'/arranged_images_orig/',...
+                        int2str(i),'.png'];
                     disp(['  write ',filename]);
-                    imwrite(im2uint16(arranged_images_orig(:,:,i)),filename);
+                    imwrite(im2uint16(arranged_images_orig(:,:,i)),...
+                        filename);
                 end
                 
-                filename = [RESULTS_FOLDER,'/2_joined_image_enfuse.tif'];
+                filename = [RESULTS_FOLDER,'/2_joined_image_enfuse.png'];
+                enfuse_filename = [RESULTS_FOLDER,'/2_joined_image_enfuse.tif'];
                 disp(['  write ',filename]);
                 enfuse = [LIB_PATH,'/enblend-enfuse/bin/enfuse.exe'];
-                system([enfuse,' --output=',filename,' ',RESULTS_FOLDER,'/arranged_images_orig/*.png']);
+                system([enfuse,' --output=',enfuse_filename,' ',...
+                    RESULTS_FOLDER,'/arranged_images_orig/*.png']);
+                % store linear picture with the same gamma value for better
+                % comparison
+                enfuse_img = im2double(imread(enfuse_filename));
+                imwrite(im2uint16(enfuse_img(:,:,1) .^ (1/gamma)), filename);
+                delete(enfuse_filename);
             end
             
             disp(['  write ',RESULTS_FOLDER,'/4_used_images.png']);
-            used_images = sum(isfinite(arranged_images),3) / length(super_res.images);
-            imwrite(im2uint16(used_images),[RESULTS_FOLDER,'/4_used_images.png']);
+            used_images = sum(isfinite(arranged_images),3) ...
+                / length(super_res.images);
+            imwrite(im2uint16(used_images),[RESULTS_FOLDER,...
+                '/4_used_images.png']);
             joined_image = normalize_img(joined_image,...
                 min_arranged_images, max_arranged_images);
             
@@ -450,20 +513,26 @@ classdef SuperResolution < handle
     end  
     
     methods(Static)
-        function joined_img = joinArrangedImages(arranged_imgs, weights_arranged_imgs)
-            joined_img = SuperResolution.joinArrangedImagesMean(arranged_imgs);
+        function joined_img = joinArrangedImages(...
+                arranged_imgs, weights_arranged_imgs)
+            
+            joined_img = SuperResolution.joinArrangedImagesWeightedMean(...
+                arranged_imgs, weights_arranged_imgs);
         end
         
-        function joined_image = joinArrangedImagesWeightedMean(arranged_images, weights_arranged_imgs)
+        function joined_image = joinArrangedImagesWeightedMean(...
+                arranged_images, weights_arranged_imgs)
+            
             disp('SuperResolution.joinArrangedImagesWeightedMean(...)');
             tic
             
-            joined_image = wmean(arranged_images, weights_arranged_imgs, 3);
+            joined_image = wmean(arranged_images,weights_arranged_imgs,3);
             
             toc
         end
         
         function joined_image = joinArrangedImagesMean(arranged_images)
+            
             disp('SuperResolution.joinArrangedImagesMean(...)');
             tic
             
@@ -473,6 +542,7 @@ classdef SuperResolution < handle
         end
         
         function joined_image = joinArrangedImagesMedian(arranged_images)
+            
             disp('SuperResolution.joinArrangedImagesMedian(...)');
             tic
             
@@ -482,6 +552,7 @@ classdef SuperResolution < handle
         end
         
         function joined_image = joinArrangedImagesWavelet(arranged_images)
+            
             disp('SuperResolution.joinArrangedImageWavelets(...)');
             tic
             
@@ -489,7 +560,8 @@ classdef SuperResolution < handle
             WAVELET = 'db4'; % see wfilters
             
             for i = size(arranged_images,3):-1:1
-                [C(:,i),S] = wavedec2(arranged_images(:,:,i),WAVELET_LEVELS,WAVELET);
+                [C(:,i),S] = wavedec2(arranged_images(:,:,i),...
+                    WAVELET_LEVELS,WAVELET);
             end
             
             %C_joined = median(C,2,'omitnan');
@@ -501,7 +573,9 @@ classdef SuperResolution < handle
             toc
         end
         
-        function generateTestImages(original_image_filename,path,amount_images,image_size)
+        function generateTestImages(original_image_filename,path,...
+                amount_images,image_size)
+            
             disp('SuperResolution.generateTestImages(...)');
             
             MAX_SCALE       = 0.5;% percent

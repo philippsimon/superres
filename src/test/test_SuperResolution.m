@@ -24,8 +24,16 @@ function test_SuperResolution(folder)
         %super_res.undistortImages();
         super_res.extractFeatures();
         super_res.matchFeatures();
+        
+        % test with red channel if more then one channel is available
+        img = super_res.images{1};
+        if isempty(img.sensorAlignment) && size(img.get('CData'),3) == 1
+            channel = '';
+        else
+            channel = 'red';
+        end
         [arranged_imgs, weights_arranged_imgs, arranged_imgs_orig] = ...
-            super_res.adaptImagesAndCalcWeights('red', true);
+            super_res.adaptImagesAndCalcWeights(channel, true);
         joined_image = SuperResolution.joinArrangedImages(...
             arranged_imgs, weights_arranged_imgs);
         super_res.writeImages(joined_image, arranged_imgs,...
@@ -46,8 +54,16 @@ function test_SuperResolution(folder)
         }
             super_res.read({[folder,'/*.*']});
             run();
+           
+        case {...
+            'test/Basler_acA3800/exposure_series_1',...
+        }
+            super_res.read({[folder,'/*.*']});
+            run();
             
-        case 'test/Samsung_GT-S7580/nesquik'
+        case {...
+            'test/Samsung_GT-S7580/nesquik',...
+        }
             % super res test - no changing expsosure time
             % or gbrg?
             super_res.read({[folder,'/*.jpg']}, 'bggr');

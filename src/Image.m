@@ -5,20 +5,21 @@ classdef Image < handle
     %IMAGE Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
+    properties (Access = public)
         sensorAlignment
         
         metaInfo
         width
         height
-        
+    end
+    
+    properties (Access = private)
         colorSpace
         
         cameraParameters
         
-        CDataBayer
         CData
-        
+        CDataNormalized
         CDataRed
         CDataRedNormalized
         CDataGreen  % RGB green channel image
@@ -30,12 +31,14 @@ classdef Image < handle
         CDataBlue
         CDataBlueNormalized
         
+        features
         featuresRed
         featuresGreen
         featuresGreen1
         featuresGreen2
         featuresBlue
         
+        validPts
         validPtsRed
         validPtsGreen
         validPtsGreen1
@@ -49,10 +52,8 @@ classdef Image < handle
                 image_size = size(CData);
                 img.height = image_size(1);
                 img.width  = image_size(2);
-                if nargin == 1
-                    img.CData = CData;
-                else
-                    img.CDataBayer = CData;
+                img.CData = CData;
+                if nargin > 1
                     img.sensorAlignment = sensorAlignment;
                     img.separateBayerChannels();
                 end
@@ -74,17 +75,8 @@ classdef Image < handle
             
             fprintf('image.extractFeatures(%s)\n', method);
             
-            map = containers.Map();
-            if isempty(img.CDataBayer)
-                map('red')    = {'featuresRed',    'validPtsRed'};
-                map('green')  = {'featuresGreen',  'validPtsGreen'};
-                map('blue')   = {'featuresBlue',   'validPtsBlue'};
-            else
-                map('red')    = {'featuresRed',    'validPtsRed'};
-                map('green1') = {'featuresGreen1', 'validPtsGreen1'};
-                map('green2') = {'featuresGreen2', 'validPtsGreen2'};
-                map('blue')   = {'featuresBlue',   'validPtsBlue'};
-            end
+            map = img.get('features_validPts_map');
+            
             for prop = map.keys
                 feature_pts = map(prop{1});
                 img_CData = img.get('CData',...
@@ -132,37 +124,37 @@ classdef Image < handle
                 %       j%2=0 j%2=1
                 % i%2=0   G1   B
                 % i%2=1   R    G2
-                img.CDataGreen1 = img.CDataBayer(1:2:img.height,1:2:img.width);
-                img.CDataBlue   = img.CDataBayer(1:2:img.height,2:2:img.width);
-                img.CDataRed    = img.CDataBayer(2:2:img.height,1:2:img.width);
-                img.CDataGreen2 = img.CDataBayer(2:2:img.height,2:2:img.width);
+                img.CDataGreen1 = img.CData(1:2:img.height,1:2:img.width);
+                img.CDataBlue   = img.CData(1:2:img.height,2:2:img.width);
+                img.CDataRed    = img.CData(2:2:img.height,1:2:img.width);
+                img.CDataGreen2 = img.CData(2:2:img.height,2:2:img.width);
                 
             case 'grbg'
                 %       j%2=0 j%2=1
                 % i%2=0   G1   R
                 % i%2=1   B    G2
-                img.CDataGreen1 = img.CDataBayer(1:2:img.height,1:2:img.width);
-                img.CDataRed    = img.CDataBayer(1:2:img.height,2:2:img.width);
-                img.CDataBlue   = img.CDataBayer(2:2:img.height,1:2:img.width);
-                img.CDataGreen2 = img.CDataBayer(2:2:img.height,2:2:img.width);
+                img.CDataGreen1 = img.CData(1:2:img.height,1:2:img.width);
+                img.CDataRed    = img.CData(1:2:img.height,2:2:img.width);
+                img.CDataBlue   = img.CData(2:2:img.height,1:2:img.width);
+                img.CDataGreen2 = img.CData(2:2:img.height,2:2:img.width);
                 
             case 'bggr'
                 %       j%2=0 j%2=1
                 % i%2=0   B    G1
                 % i%2=1   G2   R
-                img.CDataBlue   = img.CDataBayer(1:2:img.height,1:2:img.width);
-                img.CDataGreen1 = img.CDataBayer(1:2:img.height,2:2:img.width);
-                img.CDataGreen2 = img.CDataBayer(2:2:img.height,1:2:img.width);
-                img.CDataRed    = img.CDataBayer(2:2:img.height,2:2:img.width);
+                img.CDataBlue   = img.CData(1:2:img.height,1:2:img.width);
+                img.CDataGreen1 = img.CData(1:2:img.height,2:2:img.width);
+                img.CDataGreen2 = img.CData(2:2:img.height,1:2:img.width);
+                img.CDataRed    = img.CData(2:2:img.height,2:2:img.width);
                 
             case 'rggb'
                 %       j%2=0 j%2=1
                 % i%2=0   R    G1
                 % i%2=1   G2   B
-                img.CDataRed    = img.CDataBayer(1:2:img.height,1:2:img.width);
-                img.CDataGreen1 = img.CDataBayer(1:2:img.height,2:2:img.width);
-                img.CDataGreen2 = img.CDataBayer(2:2:img.height,1:2:img.width);
-                img.CDataBlue   = img.CDataBayer(2:2:img.height,2:2:img.width);
+                img.CDataRed    = img.CData(1:2:img.height,1:2:img.width);
+                img.CDataGreen1 = img.CData(1:2:img.height,2:2:img.width);
+                img.CDataGreen2 = img.CData(2:2:img.height,1:2:img.width);
+                img.CDataBlue   = img.CData(2:2:img.height,2:2:img.width);
                 
             otherwise
                 error('not supported image.sensorAlignment');
@@ -172,7 +164,7 @@ classdef Image < handle
         function demosaic(img)
         % Demosaicing
         % from https://users.soe.ucsc.edu/~rcsumner/rawguide/RAWguide.pdf
-            img.CData = im2double(demosaic(im2uint16(img.CDataBayer),img.sensorAlignment));
+            img.CData = im2double(demosaic(im2uint16(img.CData),img.sensorAlignment));
             %image.colorSpace = 'cam';
         end
         
@@ -188,12 +180,12 @@ classdef Image < handle
             %  White Balancing
             % from https://users.soe.ucsc.edu/~rcsumner/rawguide/RAWguide.pdf
             mask = wbmask(...
-                size(img.CDataBayer,1),...
-                size(img.CDataBayer,2),...
+                size(img.CData,1),...
+                size(img.CData,2),...
                 wb_multipliers,...
                 img.sensorAlignment);
             
-            img.CDataBayer = img.CDataBayer .* mask;
+            img.CData = img.CData .* mask;
         end
         
         function whitebalance(img)
@@ -208,48 +200,49 @@ classdef Image < handle
         
         function transformRGBtoBayer(img, sensorAlignment)
             img.sensorAlignment = sensorAlignment;
-            img.CDataBayer = zeros(size(img.CData,1),size(img.CData,2));
+            CDataBayer = zeros(size(img.CData,1),size(img.CData,2));
             
             switch sensorAlignment
             case 'rggb'
-                img.CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,1); % r
-                img.CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,2); % b
-                img.CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,3); % g1
-                img.CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,3); % g2
+                CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,1); % r
+                CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,2); % b
+                CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,3); % g1
+                CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,3); % g2
             case 'bggr'
-                img.CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,1); % r
-                img.CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,2); % b
-                img.CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,3); % g1
-                img.CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,3); % g2
+                CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,1); % r
+                CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,2); % b
+                CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,3); % g1
+                CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,3); % g2
             case 'grbg'
-                img.CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,1); % r
-                img.CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,2); % b
-                img.CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,3); % g1
-                img.CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,3); % g2
+                CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,1); % r
+                CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,2); % b
+                CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,3); % g1
+                CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,3); % g2
             case 'gbrg'
-                img.CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,1); % r
-                img.CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,2); % b
-                img.CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,3); % g1
-                img.CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,3); % g2
+                CDataBayer(2:2:end,1:2:end) = img.CData(2:2:end,1:2:end,1); % r
+                CDataBayer(1:2:end,2:2:end) = img.CData(1:2:end,2:2:end,2); % b
+                CDataBayer(1:2:end,1:2:end) = img.CData(1:2:end,1:2:end,3); % g1
+                CDataBayer(2:2:end,2:2:end) = img.CData(2:2:end,2:2:end,3); % g2
             end
             
-            img.CData = [];
+            img.CData = CDataBayer;
         end
         
         function value = get(img, prop, varargin)
         % image_data = get('CData', channel?: String, ('normalized', [Boolean=false])?)
+        % TODO: use a cache cell object instead of hard coded properties
         
             p = inputParser;
         
-            validProp = {'CData'};
-            checkProp = @(x) any(validatestring(x,validProp));
+            validProp = {'CData','features_validPts_map','channels'};
+            checkProp = @(x) any(strcmp(x,validProp));
             addRequired(p,'prop',checkProp);
         
             switch prop
                 case 'CData'
                     defaultChannel = '';
-                    validChannels = {'','bayer','red','green','green1','green2','blue'};
-                    checkChannel = @(x) any(validatestring(x,validChannels));
+                    validChannels = {'','red','green','green1','green2','blue'};
+                    checkChannel = @(x) any(strcmp(x,validChannels));
                     addParameter(p,'channel',defaultChannel,checkChannel);
 
                     defaultNormalized = false;
@@ -286,6 +279,30 @@ classdef Image < handle
                         prop = prop_normalized;
                     end
                     value = img.(prop);
+                    
+                case 'features_validPts_map'
+                    value = containers.Map();
+                    if ~isempty(img.sensorAlignment)
+                        value('red')    = {'featuresRed',    'validPtsRed'};
+                        value('green1') = {'featuresGreen1', 'validPtsGreen1'};
+                        value('green2') = {'featuresGreen2', 'validPtsGreen2'};
+                        value('blue')   = {'featuresBlue',   'validPtsBlue'};
+                    elseif size(img.CData,3) == 3
+                        value('red')    = {'featuresRed',    'validPtsRed'};
+                        value('green')  = {'featuresGreen',  'validPtsGreen'};
+                        value('blue')   = {'featuresBlue',   'validPtsBlue'};
+                    else
+                        value('')       = {'features',       'validPts'};
+                    end
+                    
+                case 'channels'
+                    if ~isempty(img.sensorAlignment)
+                        value = {'red','green1','green2','blue'};
+                    elseif size(img.get('CData'),3) == 3
+                        value = {'red','green','blue'};
+                    else
+                        value = {''};
+                    end
             end
         end
         
@@ -370,11 +387,12 @@ classdef Image < handle
                 filename_ext = filename_ext{1};
             end
             
+            global LIB_PATH
+                    
             switch filename_ext
                 case {'raw','rw2','arw','dng'}
                     fprintf('Image.read(''%s'', ''%s'')\n', filename, filename_ext);
                     
-                    global LIB_PATH
                     dcraw = [LIB_PATH,'/dcraw/dcraw.exe'];
                     
                     % load raw image data
@@ -400,14 +418,14 @@ classdef Image < handle
                     
                     % setup image object
                     img = Image();
-                    img.CDataBayer = im2double(data_bayer);
+                    img.CData = im2double(data_bayer);
                     if nargin >= 4
-                        img.CDataBayer(NaN_mask) = NaN;
+                        img.CData(NaN_mask) = NaN;
                     end
                     img.metaInfo = metadata;
                     img.sensorAlignment = img.metaInfo.Filter_pattern;
-                    img.height = size(img.CDataBayer,1);
-                    img.width  = size(img.CDataBayer,2);
+                    img.height = size(img.CData,1);
+                    img.width  = size(img.CData,2);
                     
                     % whitebalance
                     %wb_multipliers = (metadata.Camera_multipliers(1:3) / metadata.Camera_multipliers(2)) .* metadata.Daylight_multipliers;
@@ -425,7 +443,7 @@ classdef Image < handle
                     
                     img.separateBayerChannels();
                     
-                case {'jpg','png','tif'}
+                case {'jpg','png','tif','tiff'}
                     if nargin == 1
                         fprintf('Image.read(''%s'')\n', filename);
                     else
@@ -438,14 +456,16 @@ classdef Image < handle
                     img.width  = size(img.CData,2);
                     
                     if nargin == 1
-                        img.CDataRed = img.CData(:,:,1);
-                        img.CDataGreen = img.CData(:,:,2);
-                        img.CDataBlue = img.CData(:,:,3);
-                        
-                        if nargin >= 4
-                            img.CDataRed = img.CDataRed .* mask;
-                            img.CDataGreen = img.CDataGreen .* mask;
-                            img.CDataBlue = img.CDataBlue .* mask;
+                        if size(img.CData,3) == 3
+                            img.CDataRed = img.CData(:,:,1);
+                            img.CDataGreen = img.CData(:,:,2);
+                            img.CDataBlue = img.CData(:,:,3);
+                            
+                            if nargin >= 4
+                                img.CDataRed = img.CDataRed .* mask;
+                                img.CDataGreen = img.CDataGreen .* mask;
+                                img.CDataBlue = img.CDataBlue .* mask;
+                            end
                         end
                     else
                         % sensorAlignment set
@@ -525,17 +545,7 @@ classdef Image < handle
                 transformType = Image.defaultValue('getTransformation_transformType');
             end
         
-            map = containers.Map();
-            if isempty(img1.CDataBayer) && isempty(img2.CDataBayer)
-                map('red')    = {'featuresRed',    'validPtsRed'};
-                map('green')  = {'featuresGreen',  'validPtsGreen'};
-                map('blue')   = {'featuresBlue',   'validPtsBlue'};
-            else
-                map('red')    = {'featuresRed',    'validPtsRed'};
-                map('green1') = {'featuresGreen1', 'validPtsGreen1'};
-                map('green2') = {'featuresGreen2', 'validPtsGreen2'};
-                map('blue')   = {'featuresBlue',   'validPtsBlue'};
-            end
+            map = img1.get('features_validPts_map');
             
             matches_img1 = single([]);
             matches_img2 = single([]);
@@ -772,7 +782,7 @@ classdef Image < handle
             end
         end
         
-        function [overexp1,overexp2,p,diag_avg_samples] = findOverexposure(samples1,samples2)
+        function [overexp1,overexp2,p,diag_avg_samples] = findOverexposure(img1,img2)
             % find overexposure by comparing histogram of samples1 with values
             % of samples2
             % @param percentOverExposureArea - starting from which percentage
@@ -780,18 +790,21 @@ classdef Image < handle
             %
             % samples2 = p[2] * samples1 + p[1]
             
-            disp('Image.findOverexposure(samples1,samples2)');
+            disp('Image.findOverexposure(img1,img2)');
+            
+            idx_finite = isfinite(img1) & isfinite(img2);
+            samples = [img1(idx_finite) img2(idx_finite)];
             
             NUM_BINS = 300;
             % tested by hand with which value the outlayers were removed
             % nice
-            MIN_SAMPLES_PER_BIN = (length(samples1)/NUM_BINS)^0.5 * 0.15;
+            MIN_SAMPLES_PER_BIN = (length(samples(:,1))/NUM_BINS)^0.5 * 0.15;
             
             % distance from beginning and inflection point
             DIST = NUM_BINS * 0.05;
             
             tic
-            [hist_samples, bin_center] = hist3([samples1 samples2],[NUM_BINS NUM_BINS]);
+            [hist_samples, bin_center] = hist3(samples,[NUM_BINS NUM_BINS]);
             
             filtered_hist_samples = hist_samples;
             filtered_hist_samples( hist_samples < MIN_SAMPLES_PER_BIN ) = 0;
@@ -890,7 +903,7 @@ classdef Image < handle
                 
                 % cross product with [1,1,0]
                 % > 0 => overexposure of samples1
-                if dir_front_rear(2,1) - dir_front_rear(2,2) < 0
+                if dir_front_rear(2,1) - dir_front_rear(2,2) > 0
                     overexp1 = inflection(1);
                     overexp2 = NaN;
                 % < 0 => overexposure of samples2
@@ -899,9 +912,11 @@ classdef Image < handle
                     overexp2 = inflection(2);
                 end
                 % solve: y = p_1 * x + p_2 (x, y from mean_v_front)
-                p_1 = dir_front_rear(1,2) / dir_front_rear(1,1);
-                p_2 = mean_v_front(2) - p_1 * mean_v_front(1);
-                p = [p_1, p_2];
+                % TODO: something is wrong here - until fixed use polyfit
+%                 p_1 = dir_front_rear(1,2) / dir_front_rear(1,1);
+%                 p_2 = mean_v_front(2) - p_1 * mean_v_front(1);
+%                 p = [p_1, p_2];
+                     p = polyfit(v_front(:,1),v_front(:,2),1);
             else
                 overexp1 = NaN;
                 overexp2 = NaN;
@@ -961,8 +976,8 @@ classdef Image < handle
                     %    'LineStyle','--','Color','black','Marker','none');
                 end
                 
-                xlabel('values samples 1')
-                ylabel('values samples 2')
+                xlabel('values image 1')
+                ylabel('values image 2')
                 
                 legend(legends,'Location','southeast');
                 legend('boxoff');
@@ -1335,21 +1350,30 @@ classdef Image < handle
             end
         end
         
-        function [overexp, start_overexp, mean_start_overexp, std_start_overexp] = findOverexposureOld(samples1,samples2)
+        function [overexp, start_overexp, mean_start_overexp, ...
+                std_start_overexp] = findOverexposureHistogram2d_1(img1,img2)
             % find overexposure by comparing histogram of samples1 with values
             % of samples2
             % @param percentOverExposureArea - starting from which percentage
             % of the max value it's searched for the over exposure
             
-            disp('Image.findOverexposure(samples1,samples2)');
+            disp('Image.findOverexposure(img1,img2)');
             tic
+            
+            % to remove NaN values got through the transformation
+            idx_finite = isfinite(img1) & isfinite(img2);
+            samples1 = img1(idx_finite);
+            samples2 = img2(idx_finite);
             
             NUM_BINS = 150;
             MIN_OVEREXPOSURE_PROP = 15;
             MIN_CHECKED_BIN = 0.7 * NUM_BINS;
             OVEREXP_START_FACTOR = 1.6;
             
-            function [overexp, start_overexp, mean_start_overexp, bin_edges, bin_mean] = compare_samples(samples1, samples2)
+            function [overexp, start_overexp, mean_start_overexp, ...
+                    bin_edges, bin_mean] ...
+                    = compare_samples(samples1, samples2)
+                
                 MIN_SAMPLES_PER_BIN = max(20,length(samples1)/NUM_BINS*0.001);
 
                 % numBins = size(bin_edges,2) - 1;
@@ -1388,9 +1412,11 @@ classdef Image < handle
                 end
             end
             
-            [overexp_s1, start_overexp_s1, mean_start_overexp_s1, bin_edges_s1, bin_mean_s1] = ...
+            [overexp_s1, start_overexp_s1, mean_start_overexp_s1, ...
+                bin_edges_s1, bin_mean_s1] = ...
                 compare_samples(samples1,samples2);
-            [overexp_s2, start_overexp_s2, mean_start_overexp_s2, bin_edges_s2, bin_mean_s2] = ...
+            [overexp_s2, start_overexp_s2, mean_start_overexp_s2, ...
+                bin_edges_s2, bin_mean_s2] = ...
                 compare_samples(samples2,samples1);
             
             if isfinite(overexp_s1)
@@ -1414,7 +1440,8 @@ classdef Image < handle
                 
                 bin_center_s1 = (bin_edges_s1(1:end-1) + bin_edges_s1(2:end)) / 2;
                 bin_center_s2 = (bin_edges_s2(1:end-1) + bin_edges_s2(2:end)) / 2;
-                axis_s1_s2 = [min([bin_edges_s1(MIN_CHECKED_BIN) bin_mean_s2]) bin_edges_s1(end) min([bin_edges_s2(MIN_CHECKED_BIN) bin_mean_s1]) bin_edges_s2(end)];
+                axis_s1_s2 = [min([bin_edges_s1(MIN_CHECKED_BIN) bin_mean_s2]) ...
+                    bin_edges_s1(end) min([bin_edges_s2(MIN_CHECKED_BIN) bin_mean_s1]) bin_edges_s2(end)];
                 
                 plot_style_s1 = 'b';
                 plot_style_s2 = 'r';

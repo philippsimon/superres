@@ -1,4 +1,4 @@
-# Super Resolution and Multi Exposure
+# Superresolution and Multi-Exposure
 
 TODO
 

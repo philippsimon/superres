@@ -1,6 +1,8 @@
 % Copyright (c) 2015, Philipp Simon Schmidt
 % For more details see LICENSE.txt and AUTHORS.txt
 
+init();
+
 % test Image class with gbrg bayer image
 CData =...
   [ 0.1 0.2 0.3 0.4;
@@ -8,33 +10,33 @@ CData =...
     0.9 0.0 0.1 0.2;
     0.3 0.3 0.4 0.5 ];
 test_image_bayer_gbrg = Image(CData, 'gbrg');
-assert( isequal(test_image_bayer_gbrg.CDataBayer,CData),...
+assert( isequal(test_image_bayer_gbrg.get('CData'),CData),...
     'test_image_bayer_gbrg: CDataBayer wrong');
-assert( isequal(test_image_bayer_gbrg.CDataRed,...
+assert( isequal(test_image_bayer_gbrg.get('CData','channel','red'),...
    [ 0.5 0.7;...
      0.3 0.4]), 'test_image_bayer_gbrg: CDataRed wrong');
-assert( isequal(test_image_bayer_gbrg.CDataGreen1,...
+assert( isequal(test_image_bayer_gbrg.get('CData','channel','green1'),...
    [ 0.1 0.3;
      0.9 0.1]), 'test_image_bayer_gbrg: CDataGreen1 wrong');
-assert( isequal(test_image_bayer_gbrg.CDataGreen2,...
+assert( isequal(test_image_bayer_gbrg.get('CData','channel','green2'),...
    [ 0.6 0.8;
      0.3 0.5]), 'test_image_bayer_gbrg: CDataGreen2 wrong');
-assert( isequal(test_image_bayer_gbrg.CDataBlue,...
+assert( isequal(test_image_bayer_gbrg.get('CData','channel','blue'),...
    [ 0.2 0.4;...
      0.0 0.2]), 'test_image_bayer_gbrg: CDataBlue wrong');
  
 % test getLinearCorelation
-CData1 = [  NaN  NaN  NaN  NaN  ;
-            Inf  Inf  Inf  Inf  ;
-           -Inf -Inf -Inf -Inf  ;
-            1    1    1    1    ;
-            1    2    3    4    ];
-CData2 = [  NaN  Inf -Inf  1    ;
-            NaN  Inf -Inf  1    ;
-            NaN  Inf -Inf  1    ;
-            NaN  Inf -Inf  3    ;
-            3    5    7    9    ];
-Image.getLinearCorrelation(CData1,CData2);
+% CData1 = [  NaN  NaN  NaN  NaN  ;
+%             Inf  Inf  Inf  Inf  ;
+%            -Inf -Inf -Inf -Inf  ;
+%             1    1    1    1    ;
+%             1    2    3    4    ];
+% CData2 = [  NaN  Inf -Inf  1    ;
+%             NaN  Inf -Inf  1    ;
+%             NaN  Inf -Inf  1    ;
+%             NaN  Inf -Inf  3    ;
+%             3    5    7    9    ];
+% Image.getLinearCorrelation(CData1,CData2);
  
 %test_image_dng = Image.read('test_data/test_text/P1080860.RW2');
 %test_image_dng.whitebalanceBayer();
