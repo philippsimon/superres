@@ -12,7 +12,9 @@ function saveFigure(fig, name, aspectRatio)
     
     global RESULTS_FOLDER;
     folder = [RESULTS_FOLDER,'/figures'];
-    mkdir(folder);
+    if ~exist(folder, 'dir')
+        mkdir(folder);
+    end
     
     D = dir([folder, '/*.png']);
     figureNum = length(D(not([D.isdir]))) + 1;

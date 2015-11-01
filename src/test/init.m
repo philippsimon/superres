@@ -1,5 +1,6 @@
-% go to main path if necessary
+% go to main path if necessary and run there init
 if regexpi(pwd(),'[\/\\]test$') % folder
     cd('..');
-    init();
 end
+
+init();

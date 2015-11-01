@@ -282,7 +282,7 @@ classdef SuperResolution < handle
         
         function [arranged_imgs, weights_arranged_imgs, arranged_images_orig] = ...
                 adaptImagesAndCalcWeights(super_res, channel, apply_inverse_PSF)
-            disp('superResolution.joinImages(...)');
+            disp('superResolution.adaptImagesAndCalcWeights(...)');
             
             if nargin > 2 && apply_inverse_PSF
                 % guessed variables
@@ -298,6 +298,9 @@ classdef SuperResolution < handle
             if nargout > 2
                 arranged_images_orig = arranged_imgs;
             end
+            
+            global SAVE_FIGURES;
+            global SHOW_FIGURES;
             
             weights_arranged_imgs = ones(size(arranged_imgs));
             
@@ -324,46 +327,61 @@ classdef SuperResolution < handle
                 end
             end
             
-            fig = figure;
-            axes = NaN(amount_imgs,1);
-            for i = 1:amount_imgs
-                axes(i) = subplot(amount_imgs,1,i);
+            if SAVE_FIGURES || SHOW_FIGURES
+                if SHOW_FIGURES
+                    fig = figure;
+                else
+                    fig = figure('Visible','Off');
+                end
                 hold on
-                for j = 1:amount_imgs
-                    if i ~= j
-                        if i < j
-                            corr_curve = corr_curves_i_j{i,j};
-                            p_1 = p_i_j(i,j,1); p_2 = p_i_j(i,j,2);
-                            plot(corr_curve(:,1),(corr_curve(:,2) - p_2) / p_1)
-                        else
-                            corr_curve = corr_curves_i_j{j,i};
-                            p_1 = p_i_j(j,i,1); p_2 = p_i_j(j,i,2);
-                            plot(corr_curve(:,2),corr_curve(:,1) * p_1 + p_2)
+                
+                axes = NaN(amount_imgs,1);
+                for i = 1:amount_imgs
+                    axes(i) = subplot(amount_imgs,1,i);
+                    hold on
+                    for j = 1:amount_imgs
+                        if i ~= j
+                            if i < j
+                                corr_curve = corr_curves_i_j{i,j};
+                                p_1 = p_i_j(i,j,1); p_2 = p_i_j(i,j,2);
+                                plot(corr_curve(:,1),(corr_curve(:,2) - p_2) / p_1)
+                            else
+                                corr_curve = corr_curves_i_j{j,i};
+                                p_1 = p_i_j(j,i,1); p_2 = p_i_j(j,i,2);
+                                plot(corr_curve(:,2),corr_curve(:,1) * p_1 + p_2)
+                            end
                         end
                     end
                 end
-            end
-            % linkaxes(axes,'x');
-            
-%             amount_images = size(arranged_images,3);
-%             
-%             figure;
-%             variance = var(arranged_images,0,3,'omitnan');
-%             imshow(variance / max(variance(:)));
-%             imwrite(im2uint16(variance),...
-%                 ['test_data/results/variance-',int2str(amount_images),...
-%                 '-arranged_images.png']);
-%             
-%             figure;
-%             histogram(variance(:));
+                % linkaxes(axes,'x');
 
-%             parts = 2;
-%             for i = 0:parts-1
-%                 for j = 0:parts-1
-%                     part_imgs = arranged_imgs(1+i*end/3:(i+1)*end/3,1+j*end/3:(j+1)*end/3,:);
-%                     [~,~,p] = Image.findOverexposure(part_imgs(:,:,1),part_imgs(:,:,2))
-%                 end
-%             end
+    %             amount_images = size(arranged_images,3);
+    %             
+    %             figure;
+    %             variance = var(arranged_images,0,3,'omitnan');
+    %             imshow(variance / max(variance(:)));
+    %             imwrite(im2uint16(variance),...
+    %                 ['test_data/results/variance-',int2str(amount_images),...
+    %                 '-arranged_images.png']);
+    %             
+    %             figure;
+    %             histogram(variance(:));
+
+    %             parts = 2;
+    %             for i = 0:parts-1
+    %                 for j = 0:parts-1
+    %                     part_imgs = arranged_imgs(1+i*end/3:(i+1)*end/3,1+j*end/3:(j+1)*end/3,:);
+    %                     [~,~,p] = Image.findOverexposure(part_imgs(:,:,1),part_imgs(:,:,2))
+    %                 end
+    %             end
+    
+                if SAVE_FIGURES
+                    saveFigure(fig,'SuperResolution.adaptImagesAndCalcWeights_alignment.png');
+                end
+                if ~SHOW_FIGURES
+                    close(fig);
+                end
+            end
 
             for i = 2:amount_imgs
                 img = arranged_imgs(:,:,i);
@@ -383,8 +401,14 @@ classdef SuperResolution < handle
             % TODO: use for weight als max value of original picture as it
             % can be that the original picture only used a very small part
             % of the whole available dynamic range
-            fig = figure;
-            hold on
+            if SAVE_FIGURES || SHOW_FIGURES
+                if SHOW_FIGURES
+                    fig = figure;
+                else
+                    fig = figure('Visible','Off');
+                end
+                hold on
+            end
             max_imgs = max(arranged_imgs(:));
             x = 0:max_imgs/300:max_imgs;
             for i = 1:amount_imgs
@@ -419,9 +443,11 @@ classdef SuperResolution < handle
                     %imgaussfilt(weights_img,4);
                     %weights_img(overexposed_pixels) = 0;
                 end
-                plot(x, pdf(pd, x));
+                if SAVE_FIGURES || SHOW_FIGURES
+                    plot(x, pdf(pd, x));
 
-                plot(max_img,0,'o');
+                    plot(max_img,0,'o');
+                end
                 
                 % use equal weights for all values beside the overexposed
                 % ones
@@ -430,6 +456,13 @@ classdef SuperResolution < handle
                 
 
                 weights_arranged_imgs(:,:,i) = weights_img;
+            end
+            
+            if SAVE_FIGURES
+                saveFigure(fig,'SuperResolution.adaptImagesAndCalcWeights_weights.png');
+            end
+            if ~SHOW_FIGURES
+                close(fig);
             end
             
             % sum of weights for one image pixel has to be one
