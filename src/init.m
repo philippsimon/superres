@@ -2,10 +2,10 @@
 % For more details see LICENSE.txt and AUTHORS.txt
 
 function init()
-    addpath('./helpers', '../lib','../lib/log4m', './test')
-    
     global LIB_PATH
-    LIB_PATH = fullfile(pwd,'../lib');
+    LIB_PATH = fullfile(pwd,'../external');
+
+    addpath('./helpers', LIB_PATH, [LIB_PATH,'/log4m'], './test')
 
     global SAVE_FIGURES;
     if ~exist('SAVE_FIGURES','var') || isempty(SAVE_FIGURES)
